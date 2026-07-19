@@ -1,0 +1,43 @@
+{
+  "name": "kotodama-ong4k4k4",
+  "main": "svelte/.svelte-kit/cloudflare/_worker.js",
+  "compatibility_date": "2025-03-17",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "nodejs_als"
+  ],
+  "vars": {
+    "APP_CAPABILITIES": "[\"music-generation\",\"instrumental\",\"audio-synthesis\"]",
+    "APP_DESCRIPTION": "AI music generation (Suno-class). Phase 0: instrumental tracks via Murakumo MusicGen-small. Phase 1+: vocals + stems via DiffRhythm/YuE. Multi-DID actor composition: lyricist/composer/vocalist/arranger/mixer/critic.",
+    "APP_DISPLAY_NAME": "Ongakuka — AI Music Generator",
+    "APP_FRAMEWORK": "sveltekit-edge-bff",
+    "APP_NANOID": "ong4k4k4",
+    "APP_PERFORMER_TYPE": "service",
+    "APP_UI_TYPE": "yoro",
+    "AGENTGATEWAY_MCP_ROUTER_URL": "https://mcp.etzhayyim.com/xrpc/com.etzhayyim.mcp.message"
+  },
+  "rules": [
+    {
+      "type": "CompiledWasm",
+      "globs": [
+        "**/*.wasm"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "ong4k4k4.etzhayyim.com/*",
+      "zone_name": "etzhayyim.com"
+    },
+    {
+      "pattern": "ongakuka.etzhayyim.com/*",
+      "zone_name": "etzhayyim.com"
+    }
+  ],
+  "assets": {
+    "directory": "./svelte/.svelte-kit/cloudflare/client",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "@context": "https://etzhayyim.com/ns/kotodama/v1",
+  "@id": "did:web:ongakuka.etzhayyim.com",
+  "name": "ongakuka",
+  "nanoid": "ong4k4k4",
+  "project": "ongakuka",
+  "performerType": "service",
+  "runtimeType": "worker",
+  "uiType": "yoro",
+  "duties": ["創造の義務"],
+  "kpi": ["credits の獲得", "track の品質"],
+  "convoSystemPrompt": "You are the ongakuka.etzhayyim.com agent — an AI music generator. Phase 0: instrumental tracks via Murakumo MusicGen-small. Use lyrics + style prompt to produce 15-30s wav clips. Respond helpfully in the user's language.",
+  "governance": {
+    "classification": "internal",
+    "complianceFrameworks": ["copyright", "AGPL-3.0-aware"],
+    "raci": "responsible"
+  },
+  "profile": {
+    "agentType": "autonomous",
+    "displayName": "Ongakuka — AI Music Generator",
+    "description": "AI music generation (Suno-class). Phase 0: instrumental tracks via Murakumo MusicGen-small. Phase 1+: vocals + stems via DiffRhythm/YuE. Multi-DID actor composition: lyricist/composer/vocalist/arranger/mixer/critic.",
+    "isBot": true,
+    "capabilities": ["music-generation", "instrumental", "audio-synthesis"]
+  },
+  "space": {
+    "name": "Ongakuka",
+    "description": "AI music generation feed — published tracks and stem releases.",
+    "joinRule": "public",
+    "historyVisibility": "world-readable",
+    "channels": [
+      {
+        "name": "ongakuka-feed",
+        "kind": "public",
+        "description": "Published tracks",
+        "default": true
+      }
+    ]
+  },
+  "triggers": {
+    "http": {
+      "listen": "0.0.0.0:8080",
+      "spa": true,
+      "staticDir": "/wasm/static"
+    },
+    "subscribeRepos": {
+      "collections": [
+        "app.bsky.feed.post",
+        "app.bsky.feed.like",
+        "app.bsky.feed.repost",
+        "app.bsky.graph.follow",
+        "com.etzhayyim.ongakuka.track",
+        "com.etzhayyim.ongakuka.stem",
+        "com.etzhayyim.ongakuka.style",
+        "com.etzhayyim.ongakuka.generation"
+      ]
+    }
+  }
+}

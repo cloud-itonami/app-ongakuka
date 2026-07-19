@@ -1,0 +1,8 @@
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ongakuka.etzhayyim.com",
+  "description": "Suno-class AI music generation platform — lyrics + style → vocal/instrumental track or split stems. 2-stage (semantic→acoustic) LM driven by murakumo:inference/audio. Multi-DID actor composition (lyricist/composer/vocalist/arranger/mixer/critic) per project.",
+  "applicationCategory": "MusicGeneration",
+  "url": "https://ongakuka.etzhayyim.com"
+}
