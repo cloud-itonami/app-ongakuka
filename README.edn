@@ -1,4 +1,6 @@
 {:schema "etzhayyim.repository/v1"
- :name "com-etzhayyim-app-ongakuka"
+ :name "app-ongakuka"
  :kind :app
- :canonical-metadata :edn}
+ :canonical-metadata :edn
+ :boundary {:role :music-generation-application
+            :composer-actor "cloud-itonami/ongakuka"}}
