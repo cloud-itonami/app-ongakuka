@@ -1,0 +1,14 @@
+;; The ongakuka appview Worker. :esm, mirroring cloud-itonami-marketplace-listing
+;; and gftdcojp/nexus-x402.
+;;
+;; wrangler.jsonc's main points at dist/worker.js, which is THIS bundle compiled
+;; from the source in src/. That is the whole point of the migration recorded in
+;; docs/adr/0002: before it, main pointed at a SvelteKit build output and the
+;; TypeScript a reader opened was in no bundle at all.
+{:deps {:aliases [:cljs]}
+ :builds
+ {:worker
+  {:target :esm
+   :output-dir "dist"
+   :modules {:worker {:exports {default ongakuka.worker/handler}}}
+   :compiler-options {:output-feature-set :es2020 :infer-externs :auto}}}}

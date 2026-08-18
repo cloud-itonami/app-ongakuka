@@ -5,155 +5,120 @@ appview。** 名前が機能を示さないので先に名乗る（この worksp
 `ongakuka` は「音楽家」であって、この repo が持つのは**その公開面（appview）**
 である —— 生成そのものは murakumo の audio 推論側にあり、ここには無い。
 
-`etzhayyim/root` の `60-apps/etzhayyim-project-ongakuka` からの抽出物である。
+`etzhayyim/root` の `60-apps/etzhayyim-project-ongakuka` からの抽出物で、
+**2026-08-18 に TypeScript/Svelte から ClojureScript へ移行した**（ADR-0002）。
 数字はすべて `scripts/verify-docs-claims.cljs` が tree から再計算して検査する。
 
-## ⚠ 最初に読むこと — **deploy される handler は、あなたが開くファイルではない**
+## deploy されるものは、いま読んでいるソースである
 
-この repo で一番読み応えのあるファイルは
-`appview/etzhayyim-wasm-ongakuka-0ng4k4k4/src/app.ts`（5,460 バイト）である。
-`compose` コマンド、`/blobs/:key` の B2 配信、actor DID の登録、BPMN
-dispatcher への proxy —— アプリケーションらしいものは全部ここに在る。
+```
+src/ongakuka/route.cljc    判断（どの handler が答えるか）  ← 純 .cljc、テスト対象
+src/ongakuka/view.cljc     ページ（jp-go-dds の hiccup）    ← 純 .cljc、テスト対象
+src/ongakuka/worker.cljs   Request/Response に触る唯一の層
+        ↓ shadow-cljs :target :esm
+dist/worker.js             ← wrangler.jsonc の "main" が指すもの
+```
 
-**そのファイルは、deploy される Worker に含まれない。**
+移行前は `main` が SvelteKit のビルド出力を指し、読み手が開く `src/app.ts` は
+**どの bundle にも入っていなかった**（ADR-0001 が測って記録した）。いまは
+`main` が指す bundle が上のソースからコンパイルされたものなので、その形は
+構造的に起こり得ない。`scripts/verify-docs-claims.cljs` が
+**shadow の出力先と wrangler の `main` と export の ns 名の 3 つが噛み合って
+いること**を検査し、噛み合わなくなれば落ちる。
 
-| | |
-|---|---|
-| `wrangler.jsonc` の `main` | `svelte/.svelte-kit/cloudflare/_worker.js`（**SvelteKit のビルド出力**。tree に無い） |
-| `svelte/` から `src/app.ts` への参照 | **0 件** |
-| `@etzhayyim/kotodama-host-sdk`（app.ts の唯一の import）を宣言する package.json | **0 件** |
-| lockfile | **0 件** |
+判断を `.cljc` に置いてあるのは、ブラウザもビルドも無しにテストするためであり、
+ingress capability が qualify した時に **最初に `.kotoba` へ移る部分**だからで
+ある（入口を当面 cljs に置くのは ADR-2606290000 の判断）。
 
-`svelte/package.json` の依存は svelte 一式だけで、SDK も app.ts も入口が無い。
-つまり **app.ts はこの repo のどのツールチェーンからもビルドされない** ——
-型検査すらできない。deploy されるのは SvelteKit のページと、
-`/xrpc/[...path]` を `mcp.etzhayyim.com` へ中継する 1 本の route だけである。
+## 公開ルート
 
-この形は fleet 全体の既知クラスで、superproject の検出器
-`verify-appview-facade`（「migrated appviews whose deployed handler is not the
-file a reader opens」）が現在 146 件を数えている。この repo はその 1 件である。
-検出器自身の実測（2026-08-15、appview 329 本）では **`src/app.ts` facade を持つ
-のが 147 本、wrangler の main が SvelteKit のビルド出力なのが 175 本**である。
-
-**ただし「app.ts と SvelteKit のどちらが正本か」は問いの立て方が誤っている** ——
-下記のとおり、この workspace の正本言語はそのどちらでもない。
-
-## ⚠ 公開ページが、自分の設定と矛盾している
-
-`svelte/src/routes/+page.svelte` は訪問者にこう表示する:
-
-- **Routes 0** / “No public route is declared next to this app surface.”
-- “No public vars are declared in the nearest wrangler config.”
-
-同じディレクトリの `wrangler.jsonc` は **route を 2 本、var を 8 個**宣言して
-いる。ページの値はビルド時に生成されたのではなく **`+page.svelte` に literal で
-焼かれており**、`relativePath` は抽出前の monorepo パスのままである。
-これも検出器 `verify-appview-page-summary`（337 件）が数えているクラス。
-
-## いま在るもの — 16 ファイル / 29,888 バイト
-
-| 面 | ファイル | バイト |
+| METHOD | PATH | 何をするか |
 |---|---|---|
-| **deploy されない handler** | `…/src/app.ts` | 5,460 |
-| deploy される page | `…/svelte/src/routes/+page.svelte` | 3,149 |
-| deploy される XRPC 中継 | `…/svelte/src/routes/xrpc/[...path]/+server.ts` | 2,804 |
-| Worker 設定 | `…/wrangler.jsonc` | 1,321 |
-| actor 記述子 | `…/kotodama.jsonld` | 2,003 |
-| 設計 | `CLAUDE.md` | 8,909 |
-| 移行チェックリスト | `MIGRATION-TODO.md` | 3,088 |
-| svelte の設定 4 本 | `package.json` / `svelte.config.js` / `tsconfig.json` / `vite.config.ts` / `app.html` | 1,570 |
-| 由来・権利・識別 | `NOTICE` / `PROJECT.jsonld` / `README.edn` / `migration.edn` | 1,584 |
+| GET | `/` | この appview の説明ページ |
+| GET | `/health` | 生存確認。deploy された面が答えることを外から確かめられる |
+| POST | `/xrpc/:nsid` | XRPC を MCP router へ中継する |
+| OPTIONS | `/xrpc/*` | CORS preflight |
 
-**テストは 0 本。`src/` 直下は無い**（`src/` は appview の中にある）。
+**この表の出所は `ongakuka.route/routes` で、ページもそこから描く。** 移行前の
+ページは `routeCount: 0` と `vars: []` を literal で持っており、隣の
+`wrangler.jsonc` が route 2・var 8 を宣言していることに気づけなかった。いまは
+route 表を渡す側が持ち、ページは描くだけなので、両者がずれる余地が無い。
 
-## 呼び先が 1 つも解決しない
+## いま在るもの — 19 ファイル
 
-このコードが実行時に触る先を実測した（2026-08-18）:
+| 面 | ファイル |
+|---|---|
+| 判断・描画・edge | `src/ongakuka/{route.cljc, view.cljc, worker.cljs}` |
+| テスト | `test/ongakuka/route_test.cljc`（5 tests / 21 assertions） |
+| ビルド | `deps.edn` / `shadow-cljs.edn` |
+| Worker 設定 | `appview/…/wrangler.jsonc` |
+| actor 記述子 | `appview/…/kotodama.jsonld` |
+| 設計 | `CLAUDE.md` / `MIGRATION-TODO.md` |
+| 由来・権利・識別 | `NOTICE` / `PROJECT.jsonld` / `README.edn` / `migration.edn` |
+| 文書 | `README.md` / `docs/operator-quickstart.md` / `docs/adr/*.edn` |
+
+**production の TypeScript は 0 本、正本言語（`.cljs`/`.cljc`）が 4 本。**
+移行前は 3 対 0 だった。この 2 つの数は検証器の claim なので、TS が戻れば落ちる
+——撤去したパスに戻る場合（`removed-by-migration-absent`）も、別名で入る場合
+（`production-ts-files`）も、別々の claim が捕まえる。
+
+## UI
+
+基盤は `kotoba-lang/jp-go-digital-design-system`（デジタル庁デザインシステム）。
+色・寸法は `--hig-*` トークン契約だけで書き、raw hex も px フォントサイズも
+置かない。app 固有 CSS は 3 行。CSS は外部リクエストゼロの方針どおり
+`shadow.resource/inline` で bundle に焼く。
+
+決定論的 audit（`kotoba-lang/design-quality`）で **100.00 / 100（gate 95）**。
+
+## 呼び先が 1 つも解決しない（移行では直らない）
 
 | ホスト | 役割 | DNS |
 |---|---|---|
 | `ongakuka.etzhayyim.com` | 公開ホスト（wrangler の route） | **NXDOMAIN** |
 | `ong4k4k4.etzhayyim.com` | 同（nanoid 側） | **NXDOMAIN** |
-| `mcp.etzhayyim.com` | `+server.ts` の XRPC 中継先 | **NXDOMAIN** |
-| `dispatcher.etzhayyim.com` | `app.ts` の BPMN proxy 先 | **NXDOMAIN** |
+| `mcp.etzhayyim.com` | `/xrpc/:nsid` の中継先 | **NXDOMAIN** |
 
-deploy 先も、deploy されたコードが呼ぶ相手も、いま存在しない。
+deploy 先も中継先も、いま存在しない。`/xrpc/` は到達できなければ **502 を返す**
+——成功と同じ形で隠さない。
 
 ## 由来（custody）
 
 `migration.edn` は出所を `etzhayyim/root` の tree `0426d779` と宣言し、
-`:identity {:allowed-additions ["README.edn" "migration.edn"]}` という
-custody 契約を自分で持っている。GitHub 上のその tree を引いて照合した:
+`:allowed-additions` に `README.edn` と `migration.edn` を持つ。移行後の状態:
 
-- 元の **14 ファイル / 29,319 バイトが 1 バイトも変わらず保存されている**
+- 継承した 7 ファイル（15,584 バイト）は**いまも 1 バイトも変わっていない**
   （sha256 を検証器に固定）
-- 追加は宣言どおり `README.edn` と `migration.edn` の 2 件のみ
-- 14 + 2 = 16 ファイル、29,319 + 569 = 29,888 バイト
+- `wrangler.jsonc` は**意図的に変更**した（`main` の付け替え、消えた
+  SvelteKit client を指す `assets` の撤去、`APP_FRAMEWORK` の更新）
+- TypeScript/Svelte の 8 ファイルは**移行で撤去**した。検証器はその 8 パスを
+  名指しで「不在であること」を検査する —— byte 合計は「TS が消えた」と言えない
 
-## 正本言語は TypeScript ではない — この repo に正本言語のコードは 0 本
+## 残っている欠陥（移行では直っていない）
 
-superproject `CLAUDE.md` の repo-wide 規則は、第一の runtime を
-**kotoba wasm > clojurewasm > ClojureScript > nbb**（JVM と bb は降格）と定め、
-新規の生 JS（`.mjs` / `.cjs`）と `.sh` を禁じている。**TypeScript はこの順序に
-入っていない。**
+1. **`listTracks` が未実装**。移行前は空配列と `Phase 0 stub` の note を返して
+   おり、「まだ実装していない」と「1 曲も無い」が呼び出し側から区別できなかった。
+   移行後の Worker はこの経路を**持たない**（下記「持ち越さなかったもの」）。
+2. **`MIGRATION-TODO.md` のチェックボックス 7 件が未チェック**のまま。憲章適合の
+   手動レビューは未実施であると文書自身が書いている。
 
-この repo の production source を数えると:
+### 持ち越さなかったもの（黙って消していない）
 
-| | 本数 |
-|---|---|
-| TypeScript（`.ts`） | **3** |
-| 正本言語（`.cljs` / `.cljc` / `.clj` / `.kotoba`） | **0** |
+移行前の `src/app.ts` にあってどこにも deploy されていなかった経路のうち、
+次は**意図的に移していない**:
 
-（`scripts/` は除外して数えている —— この repo で唯一の `.cljs` は今回足した
-検証器そのもので、それを数えると差が見えなくなる。）
+- `compose` → `dispatcher.etzhayyim.com` への POST（宛先が NXDOMAIN）
+- `/blobs/:key` の B2 配信（`B2_KEY_ID` 等の binding が `wrangler.jsonc` に無い）
+- `listTracks`（上記 1）
 
-つまり **deploy される側も、読み手が開く側も、どちらも非正本の言語**である。
-`app.ts` を生かすか SvelteKit に寄せるかという二択は、どちらを選んでも
-正本には着地しない。
-
-### 正本の形は同じ org に実在する
-
-`cloud-itonami/cloud-itonami-marketplace-listing`:
-
-```
-src/listingops/*.cljc     ← 読み手が開くソース
-shadow-cljs.edn           ← :target :esm → dist/worker.js
-wrangler.jsonc            ← "main": "dist/worker.js"
-```
-
-**deploy される bundle が、読むソースからコンパイルされている**ので、この repo が
-抱えている facade の形は構造的に起こり得ない。実測（2026-08-18、cloud-itonami の
-checkout 済み repo）では **shadow-cljs を持つ appview が 87 本**、SvelteKit の
-ビルド出力を配っているものが 99 本ある。判断（governor / policy）を `.kotoba` に
-置いた例も同 org に複数ある（`cloud-itonami-isco-1212/kotoba/governor_decision.kotoba` 等）。
-
-なお Worker の入口を当面 cljs に置くのは ADR-2606290000 の判断で、kotoba の
-ingress capability が `:native-aot` / `:wasm-aot` とも `pending` だからである
-（superproject `CLAUDE.md`）。**入口は cljs、判断は `.kotoba`** が今日の形。
-
-## 既知の欠陥（測定済み・直していない）
-
-1. **deploy される handler と読み手が開くファイルが別**（上記）。
-2. **公開ページが自分の設定と矛盾する**（routes 0 vs 2、vars 0 vs 8）。
-3. **`app.ts` はビルド不能** —— import する SDK をどの package.json も宣言せず、
-   lockfile も無い。
-4. **`listTracks` が空配列を返す stub** で、`note` に
-   `Phase 0 stub — wire createKyselyDb in next iteration` と書いてある。
-   「まだ実装していない」と「1 曲も無い」が呼び出し側から区別できない。
-   しかも `MIGRATION-TODO.md` のチェックリストは **Kysely を剥がせ**と要求して
-   いるので、この note が示す次の一歩は移行方針と正面から衝突する。
-5. **`MIGRATION-TODO.md` のチェックボックスが 7 件すべて未チェック**のまま
-   「ad-pixel codemod は完了」とだけ宣言されている。憲章適合の手動レビューは
-   未実施であると文書自身が書いている。
-
-**どれも直していない。** 1〜3 は「この appview の正本をどちらにするか」
-（app.ts を生かすのか、SvelteKit 側に寄せるのか）というオーナー決定が先で、
-4 は永続層の決定を要し、5 は憲章解釈だからである。
+**動かない経路を移植して「移行済み」と言わないため**である。必要になった時点で
+`route.cljc` に足し、テストと binding を伴って戻す。
 
 ## 検証
 
 ```bash
-nbb scripts/verify-docs-claims.cljs .     # <dir> は先頭に置く
+nbb scripts/verify-docs-claims.cljs .          # <dir> は先頭に置く
 ```
 
 exit 0 = 全一致 / 1 = 食い違い / **2 = 判定できなかった**（0 と区別する）。
+テストとビルドは `docs/operator-quickstart.md`。
