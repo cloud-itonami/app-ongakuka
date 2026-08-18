@@ -41,7 +41,15 @@
    :app-ts-bytes         5460
    :refs-to-app-ts       0         ; from anywhere under svelte/
    :packages-declaring-host-sdk 0  ; package.json files declaring @etzhayyim/kotodama-host-sdk
-   :lockfiles            0})
+   :lockfiles            0
+   ;; Language of the production source. This workspace's canonical runtimes are
+   ;; kotoba wasm > clojurewasm > ClojureScript > nbb (superproject CLAUDE.md);
+   ;; TypeScript is not among them. Both of the candidate handlers above are
+   ;; TypeScript, so "which of the two is canonical" is the wrong question -- the
+   ;; answer is neither. These two numbers move the moment that stops being true.
+   ;; scripts/ is excluded: the verifier itself is .cljs and would mask the gap.
+   :production-ts-files  3
+   :production-canonical-files 0})
 
 (def preserved
   {"CLAUDE.md" "ae633f76c2a06ec9cd5947967fecd9015e23c91fdcff250494e7f7aea54e1797"
@@ -150,7 +158,13 @@
                          :when (and t (str/includes? t "kotodama-host-sdk"))]
                      f)))
     (check! :lockfiles (:lockfiles claims)
-            (count (filter #(re-find #"(?i)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$" %) files)))))
+            (count (filter #(re-find #"(?i)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$" %) files)))
+
+    (let [prod (remove #(str/starts-with? % "scripts/") files)]
+      (check! :production-ts-files (:production-ts-files claims)
+              (count (filter #(str/ends-with? % ".ts") prod)))
+      (check! :production-canonical-files (:production-canonical-files claims)
+              (count (filter #(re-find #"\.(cljs|cljc|clj|kotoba)$" %) prod))))))
 
 (let [u @undetermined f @failures]
   (when (seq u)

@@ -32,6 +32,11 @@ dispatcher への proxy —— アプリケーションらしいものは全部�
 この形は fleet 全体の既知クラスで、superproject の検出器
 `verify-appview-facade`（「migrated appviews whose deployed handler is not the
 file a reader opens」）が現在 146 件を数えている。この repo はその 1 件である。
+検出器自身の実測（2026-08-15、appview 329 本）では **`src/app.ts` facade を持つ
+のが 147 本、wrangler の main が SvelteKit のビルド出力なのが 175 本**である。
+
+**ただし「app.ts と SvelteKit のどちらが正本か」は問いの立て方が誤っている** ——
+下記のとおり、この workspace の正本言語はそのどちらでもない。
 
 ## ⚠ 公開ページが、自分の設定と矛盾している
 
@@ -84,6 +89,47 @@ custody 契約を自分で持っている。GitHub 上のその tree を引い�
   （sha256 を検証器に固定）
 - 追加は宣言どおり `README.edn` と `migration.edn` の 2 件のみ
 - 14 + 2 = 16 ファイル、29,319 + 569 = 29,888 バイト
+
+## 正本言語は TypeScript ではない — この repo に正本言語のコードは 0 本
+
+superproject `CLAUDE.md` の repo-wide 規則は、第一の runtime を
+**kotoba wasm > clojurewasm > ClojureScript > nbb**（JVM と bb は降格）と定め、
+新規の生 JS（`.mjs` / `.cjs`）と `.sh` を禁じている。**TypeScript はこの順序に
+入っていない。**
+
+この repo の production source を数えると:
+
+| | 本数 |
+|---|---|
+| TypeScript（`.ts`） | **3** |
+| 正本言語（`.cljs` / `.cljc` / `.clj` / `.kotoba`） | **0** |
+
+（`scripts/` は除外して数えている —— この repo で唯一の `.cljs` は今回足した
+検証器そのもので、それを数えると差が見えなくなる。）
+
+つまり **deploy される側も、読み手が開く側も、どちらも非正本の言語**である。
+`app.ts` を生かすか SvelteKit に寄せるかという二択は、どちらを選んでも
+正本には着地しない。
+
+### 正本の形は同じ org に実在する
+
+`cloud-itonami/cloud-itonami-marketplace-listing`:
+
+```
+src/listingops/*.cljc     ← 読み手が開くソース
+shadow-cljs.edn           ← :target :esm → dist/worker.js
+wrangler.jsonc            ← "main": "dist/worker.js"
+```
+
+**deploy される bundle が、読むソースからコンパイルされている**ので、この repo が
+抱えている facade の形は構造的に起こり得ない。実測（2026-08-18、cloud-itonami の
+checkout 済み repo）では **shadow-cljs を持つ appview が 87 本**、SvelteKit の
+ビルド出力を配っているものが 99 本ある。判断（governor / policy）を `.kotoba` に
+置いた例も同 org に複数ある（`cloud-itonami-isco-1212/kotoba/governor_decision.kotoba` 等）。
+
+なお Worker の入口を当面 cljs に置くのは ADR-2606290000 の判断で、kotoba の
+ingress capability が `:native-aot` / `:wasm-aot` とも `pending` だからである
+（superproject `CLAUDE.md`）。**入口は cljs、判断は `.kotoba`** が今日の形。
 
 ## 既知の欠陥（測定済み・直していない）
 

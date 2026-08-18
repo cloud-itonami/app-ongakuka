@@ -84,9 +84,8 @@ MIGRATION-TODO.md の 7 項目のチェックボックスは全て未チェッ�
 ## Decision
 
 1. **測ったことを README.md と docs/operator-quickstart.md に書き、欠陥は
-   直さずに名指しする。** 発見 1〜3 の修理は『この appview の正本を app.ts 側と
-   SvelteKit 側のどちらに置くか』という決定を先に要する。読めない状態のまま
-   直すより、読める状態にしてから決める方が安い。
+   直さずに名指しする。** 発見 1〜3 の修理は移行の順番という決定を先に要する
+   （下記の訂正節）。読めない状態のまま直すより、読める状態にしてから決める方が安い。
 2. **数値は検証器に固定する。** scripts/verify-docs-claims.cljs が tree から
    再計算して照合し、食い違えば exit 1、tree を読み切れなければ exit 2 を返す。
    保存 14 ファイルの sha256 を固定してあるので、custody が崩れれば byte 合計に
@@ -96,10 +95,36 @@ MIGRATION-TODO.md の 7 項目のチェックボックスは全て未チェッ�
    この周は別セッションが lock を保持していたこと（実際に exit 2 で拒否された）
    の 2 点による。発見 1 の結論は宣言だけで決まるのでビルドの成否に依存しない。
 
+## 訂正（2026-08-18、オーナー指摘）
+
+初版はこの節に『正本は src/app.ts か SvelteKit 側か』と書いた。**問いの立て方が
+誤っている。** superproject CLAUDE.md の repo-wide 規則は第一の runtime を
+kotoba wasm > clojurewasm > ClojureScript > nbb と定めており、TypeScript は
+その順序に入っていない。候補の 2 つはどちらも TypeScript なので、どちらを選んでも
+正本には着地しない。
+
+測ると、この repo の production source は TypeScript 3 本、正本言語
+（.cljs / .cljc / .clj / .kotoba）0 本である（scripts/ を除く。唯一の .cljs は
+この round が足した検証器で、数に入れると差が見えなくなる）。この 2 つの数は
+検証器の claim に固定してあり、移行が始まった瞬間に動く。
+
+正本の形は同じ org に実在する。cloud-itonami-marketplace-listing は
+src/listingops/*.cljc を shadow-cljs（:target :esm）で dist/worker.js にし、
+wrangler.jsonc の main がそれを指す。deploy される bundle が読むソースから
+コンパイルされているので、発見 1 の形は構造的に起こり得ない。実測 2026-08-18、
+cloud-itonami の checkout 済み repo で shadow-cljs を持つ appview は 87 本、
+SvelteKit のビルド出力を配っているものは 99 本。判断を .kotoba に置いた例も
+同 org に複数ある（cloud-itonami-isco-1212/kotoba/governor_decision.kotoba 等）。
+
+Worker の入口を当面 cljs に置くのは ADR-2606290000 の判断で、kotoba の ingress
+capability が :native-aot / :wasm-aot とも pending だからである。入口は cljs、
+判断は .kotoba が今日の形。
+
 ## Open questions（オーナー決定が要る）
 
-- この appview の正本は src/app.ts か、SvelteKit 側か。app.ts を生かすなら
-  ビルド経路と SDK の依存宣言が要る。生かさないなら、なぜ残すのかを書く。
+- **いつ cljs へ移すか。** 移行先の形は決まっているので、決めるのは可否ではなく
+  順番である。移した時点で発見 1〜3 は同時に消える（読むソースから deploy される
+  bundle がコンパイルされるため）。
 - 公開ページの表示は生成物にするのか、literal のままにするのか。literal なら
   wrangler.jsonc と一致させる責任が誰にあるかを決める。
 - listTracks の永続層。MIGRATION-TODO は Kysely を禁じ、コードの note は
