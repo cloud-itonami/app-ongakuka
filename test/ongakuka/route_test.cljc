@@ -33,6 +33,18 @@
   (is (= {:ok? true :value {:a 1}} (route/unwrap-mcp {:result {:a 1}})))
   (is (false? (:ok? (route/unwrap-mcp {:error {:message "boom"}})))))
 
+(deftest page-carries-no-unrendered-markup
+  (testing "Markdown の記法はページ本文で何も意味しない —— そのまま画面に出る"
+    ;; 実測 2026-08-19（cloud-itonami/aidesk の agent が指摘）: この view は
+    ;; docstring の書き癖のまま本文にも ** を書いており、描画されたページに
+    ;; literal な ** が 2 個出ていた。強調は [:strong] で書く。
+    (let [html (view/render {:css "" :routes route/routes
+                             :vars [:APP_NANOID] :mcp-url "https://x.invalid/y"})]
+      (is (zero? (count (re-seq #"\*\*" html)))
+          "ページ本文に Markdown の ** が残っている")
+      (is (zero? (count (re-seq #"(?m)^#{1,6} " html)))
+          "ページ本文に Markdown の見出し記法が残っている"))))
+
 (deftest page-shows-the-real-routes
   (testing "ページは route 表から描く。0 を焼かない（docs/adr/0001 の欠陥）"
     (let [html (view/render {:css "/*x*/" :routes route/routes

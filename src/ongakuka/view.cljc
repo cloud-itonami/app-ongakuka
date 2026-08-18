@@ -62,8 +62,12 @@
     (if (seq vars)
       [:div (into [:p] (interpose " "
                                   (map (fn [k] (dds/chip-label (name k))) vars)))
+       ;; 強調は hiccup で書く。Markdown の ** はここでは何も意味せず、
+       ;; そのまま画面に出る（実測 2026-08-19: このページに literal ** が 2 個）。
        [:p {:class "ong-note"}
-       "キー名のみ。**ただし下の中継先だけは値そのもの**（"
+       "キー名のみ。"
+       [:strong "ただし下の中継先だけは値そのもの"]
+       "（"
        [:span {:class "ong-mono"} "AGENTGATEWAY_MCP_ROUTER_URL"]
        "）—— どこへ中継するかは運用者が見る必要があるので意図的に出している。"
        "それ以外の値は出さない。"]]
