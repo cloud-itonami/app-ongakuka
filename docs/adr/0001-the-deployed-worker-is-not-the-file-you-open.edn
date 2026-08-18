@@ -1,0 +1,115 @@
+[{:db/id -1
+  :adr/id "app-ongakuka-0001"
+  :adr/title "deploy される Worker は、読み手が開くファイルではない — 測定と、直さずに記録した理由"
+  :adr/status "accepted"
+  :adr/date "2026-08-18"
+  :adr/doc_type "adr"
+  :adr/source-format "edn"
+  :adr/body "
+# ADR-0001: deploy される Worker は、読み手が開くファイルではない
+
+**Status**: accepted / **Date**: 2026-08-18 / **Deciders**: Jun Kawasaki
+
+## Context
+
+この repository は etzhayyim/root の 60-apps/etzhayyim-project-ongakuka から
+抽出された appview である。抽出以降、内容についての commit は無く、
+README.md も無かった。入口は README.edn（6 行の EDN メタデータ）だけで、
+冷たい読み手が『何が deploy され、何が deploy されないか』を知る手段が無かった。
+
+fleet 成熟度計測（superproject ADR-2608052000）はこの repo を own=0.0481 と測り、
+docs 軸は 0bp である。設計文書は在る（CLAUDE.md 8,909 バイト）—— 無いのは
+README.md と operator quickstart と ADR である。
+
+## 測定（2026-08-18、tree 27cec35）
+
+- 追跡 16 ファイル / 29,888 バイト、テスト 0 本、lockfile 0 件
+- custody: migration.edn が名指す出所 tree 0426d779 を GitHub から引いて照合。
+  元の 14 ファイル / 29,319 バイトが 1 バイトも変わらず保存されている。
+  追加は migration.edn 自身の :identity :allowed-additions が宣言する
+  README.edn と migration.edn の 2 件のみ（29,319 + 569 = 29,888）
+
+### 発見 1 — deploy される handler と、読み手が開くファイルが別（最重要）
+
+この repo で最もアプリケーションらしいファイルは
+appview/etzhayyim-wasm-ongakuka-0ng4k4k4/src/app.ts（5,460 バイト）で、
+compose コマンド、/blobs/:key の B2 配信、actor DID の登録、BPMN dispatcher
+への proxy が書いてある。
+
+しかし wrangler.jsonc の main は svelte/.svelte-kit/cloudflare/_worker.js
+（SvelteKit のビルド出力、tree に無い）であり、svelte/ 配下から src/app.ts
+への参照は 0 件、app.ts が import する @etzhayyim/kotodama-host-sdk を宣言する
+package.json も 0 件である。svelte/package.json の依存は svelte 一式だけ。
+
+つまり app.ts は、この repo のどのツールチェーンからもビルドされない。
+実際に deploy されるのは SvelteKit のページと、/xrpc/[...path] を
+mcp.etzhayyim.com へ中継する 1 本の route だけである。
+
+これは fleet 全体の既知クラスで、superproject の検出器 verify-appview-facade
+（migrated appviews whose deployed handler is not the file a reader opens）が
+現在 146 件を数えている。この repo はその 1 件である。
+
+### 発見 2 — 公開ページが自分の設定と矛盾している
+
+svelte/src/routes/+page.svelte は訪問者に Routes 0 と表示し、
+『No public route is declared next to this app surface』
+『No public vars are declared in the nearest wrangler config』と書く。
+同じディレクトリの wrangler.jsonc は route を 2 本、var を 8 個宣言している。
+ページの値は生成物ではなく +page.svelte に literal で焼かれており、
+relativePath は抽出前の monorepo パスのままである。
+検出器 verify-appview-page-summary が数える 337 件のクラス。
+
+### 発見 3 — 呼び先が 1 つも解決しない
+
+ongakuka.etzhayyim.com / ong4k4k4.etzhayyim.com（wrangler の route）、
+mcp.etzhayyim.com（+server.ts の中継先）、dispatcher.etzhayyim.com
+（app.ts の proxy 先）—— 4 つとも A レコードを返さない。
+deploy 先も、deploy されたコードが呼ぶ相手も、いま存在しない。
+
+### 発見 4 — listTracks が『空』と『未実装』を同じ値で返す
+
+cmdListTracks は items 空配列と total 0 を返し、note に
+『Phase 0 stub — wire createKyselyDb in next iteration』と書く。呼び出し側から
+『まだ実装していない』と『1 曲も無い』が区別できない。superproject
+ADR-2608136000 が名指しした class（測れなかったものが、測って問題が無かった
+ものと同じ値を返す）である。加えて MIGRATION-TODO.md のチェックリストは
+Kysely を剥がすことを要求しており、この note が示す次の一歩は移行方針と衝突する。
+
+### 発見 5 — 憲章適合レビューが未実施のまま
+
+MIGRATION-TODO.md の 7 項目のチェックボックスは全て未チェックで、文書自身が
+『TRANSFORM 分類は検出された違反ではなく domain pattern から付けたので、
+手動レビューが必要』と書いている。完了しているのは ad-pixel codemod だけである。
+
+## Decision
+
+1. **測ったことを README.md と docs/operator-quickstart.md に書き、欠陥は
+   直さずに名指しする。** 発見 1〜3 の修理は『この appview の正本を app.ts 側と
+   SvelteKit 側のどちらに置くか』という決定を先に要する。読めない状態のまま
+   直すより、読める状態にしてから決める方が安い。
+2. **数値は検証器に固定する。** scripts/verify-docs-claims.cljs が tree から
+   再計算して照合し、食い違えば exit 1、tree を読み切れなければ exit 2 を返す。
+   保存 14 ファイルの sha256 を固定してあるので、custody が崩れれば byte 合計に
+   紛れずに名前で報告される。
+3. **ビルドは走らせず、走らせなかったと書く。** lockfile が無く結果が walk ごとに
+   変わること、および workspace の resource governor が同時 1 本に制限していて
+   この周は別セッションが lock を保持していたこと（実際に exit 2 で拒否された）
+   の 2 点による。発見 1 の結論は宣言だけで決まるのでビルドの成否に依存しない。
+
+## Open questions（オーナー決定が要る）
+
+- この appview の正本は src/app.ts か、SvelteKit 側か。app.ts を生かすなら
+  ビルド経路と SDK の依存宣言が要る。生かさないなら、なぜ残すのかを書く。
+- 公開ページの表示は生成物にするのか、literal のままにするのか。literal なら
+  wrangler.jsonc と一致させる責任が誰にあるかを決める。
+- listTracks の永続層。MIGRATION-TODO は Kysely を禁じ、コードの note は
+  Kysely を予定している。どちらかが古い。
+- ホストを立て直すのか、この appview を retire するのか。4 ホストとも
+  NXDOMAIN の状態で route を宣言し続ける意味はない。
+
+## Consequences
+
+- 冷たい読み手が入口 1 つで『何が deploy され、何がされないか』を把握できる。
+- 数値の陳腐化は検証器が落ちることで分かる。
+- 欠陥は直っていない。これは現在地の記録であって修理の記録ではない。
+"}]
