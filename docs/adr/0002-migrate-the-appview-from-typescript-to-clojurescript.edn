@@ -82,8 +82,7 @@ shadow.resource/inline で bundle に焼く（design system の外部リクエ�
   出した。scripts/smoke-worker.cljs がそれを import して 14 項目を確認:
   default export が fetch を持つ / GET / が 200 の HTML で route 表の全 path を
   載せている / env のキーは出て値は出ない / DADS の CSS が bundle に焼かれている
-  / GET /health が 200 で自分の route を名乗る / POST /xrpc/ が 400（前方一致で
-  素通ししない）/ OPTIONS が 204 / 未知パスが 404 / 誤 method が 405。
+  / GET /health が 200 で自分の route を名乗る / POST /xrpc/ が 400（空の nsid のみ）/ OPTIONS が 204 / 未知パスが 404 / 誤 method が 405。
   **これがこの repo で唯一 deploy される成果物に触る検査である。**
 - smoke 自身も落ちることを確認した: bundle が無ければ exit 2（0 とも 1 とも別）、
   bundle の route 文字列を壊すと該当 2 項目だけが落ちる。
@@ -121,6 +120,31 @@ mutation を 2 度当てて 2 度とも緑だったので気づいた（外し�
 確認した: .svelte ファイルが戻る / svelte.config.js が戻る（撤去リストに無い名前
 でも捕まる）/ compatibility_flags に nodejs_compat が戻る / CLAUDE.md が Svelte
 計画に戻る。
+
+## 訂正 2（2026-08-18）— 多段パスの扱いを移行前に戻した
+
+初版の cljs 実装は `/xrpc/a/b` を 400 にし、それを『前方一致で素通ししない』と
+書いた。**これは移行ではなく方針変更だった。** 移行前の SvelteKit route は
+rest parameter `[...path]` で受けており、空文字だけを 400 にして `a/b` は
+そのまま tool 名として転送していた。NSID に `/` は現れないので上流で失敗する
+だけだが、失敗の起きる場所と応答が変わる。
+
+同型の移行（cloud-itonami/app-lo）で先にこの区別が正しく行われていた —— 曰く、
+絞るのは『移行の衣を着た方針変更』である。こちらを合わせ、空だけを 400 にした。
+テストは旧挙動に戻すと赤くなることを確認済み。
+
+絞りたいなら、それは移行とは別の決定として記録する。
+
+ビルド済み bundle でも 1 度確かめた（source のテストは bundle の挙動を保証しない）:
+
+    POST /xrpc/        → 400
+    POST /xrpc/a/b     → 502 {"error":"MCP router unreachable", "url":"https://mcp.etz…
+    POST /xrpc/com.x.y → 502 {"error":"MCP router unreachable", "url":"https://mcp.etz…
+
+多段は単一セグメントと同一に扱われ、上流未到達は成功と同じ形に潰れず URL 付きで
+返る。**この確認は 1 回きりの手動であり、常設の gate は unit test の方である** ——
+smoke に入れると mcp.etzhayyim.com への実 fetch に依存する検査になり、いま
+NXDOMAIN であることに寄りかかることになるので入れていない。
 
 ## Consequences
 

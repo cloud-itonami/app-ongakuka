@@ -25,12 +25,20 @@
     :route/doc "XRPC を MCP router へ中継する"}])
 
 (defn- xrpc-nsid
-  "`/xrpc/<nsid>` の nsid。空文字と多段パスは nil（誤って前方一致で通さない）。"
+  "`/xrpc/<nsid>` の nsid。**空文字だけが nil**。
+
+  多段パス（`/xrpc/a/b`）も通す。移行前の SvelteKit route は rest parameter
+  `[...path]` で受けており、`a/b` をそのまま tool 名として転送していた。
+  ここで 1 セグメントに絞ると挙動が変わる —— NSID に `/` は現れないので
+  上流で失敗するだけだが、**それは移行ではなく方針変更**であり、移行の commit に
+  紛れ込ませるべきものではない。絞るなら別の決定として記録する。
+
+  この判断は同型の移行（cloud-itonami/app-lo）で先に正しく行われており、
+  こちらを合わせた。"
   [path]
   (when (str/starts-with? path "/xrpc/")
     (let [rest' (subs path (count "/xrpc/"))]
-      (when (and (seq rest') (not (str/includes? rest' "/")))
-        rest'))))
+      (when (seq rest') rest'))))
 
 (defn dispatch
   "method + path → 何をするか。Request も Response も知らない。
