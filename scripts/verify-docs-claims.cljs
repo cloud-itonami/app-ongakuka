@@ -21,7 +21,7 @@
 (def APP "appview/etzhayyim-wasm-ongakuka-0ng4k4k4")
 
 (def claims
-  {:tracked-files 19
+  {:tracked-files 21
    :inherited-bytes 15584          ; the 7 inherited files still carried unchanged
    :production-ts-files 0
    :production-canonical-files 4

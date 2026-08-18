@@ -77,11 +77,28 @@ shadow.resource/inline で bundle に焼く（design system の外部リクエ�
   shadow の export を別 ns にする / view が route 表でなく固定値を描く。
   それぞれ対応する claim だけが落ちることを確認した。
 
-**bundle のビルド（shadow-cljs release）はこの ADR を書いた時点で未実行。**
-workspace の resource governor が高負荷ビルドを同時 1 本に制限しており、
-別セッションが lock を保持していたため（exit 2 で拒否された）。迂回しない。
-lock が空き次第ビルドし、dist/worker.js が生成されることを確かめてから
-main へ着地させる。
+- **bundle をビルドし、実際に叩いた。** shadow-cljs release worker が
+  55 files / 12 compiled / 0 warnings / 44.9s で通り、dist/worker.js（245 KB）を
+  出した。scripts/smoke-worker.cljs がそれを import して 14 項目を確認:
+  default export が fetch を持つ / GET / が 200 の HTML で route 表の全 path を
+  載せている / env のキーは出て値は出ない / DADS の CSS が bundle に焼かれている
+  / GET /health が 200 で自分の route を名乗る / POST /xrpc/ が 400（前方一致で
+  素通ししない）/ OPTIONS が 204 / 未知パスが 404 / 誤 method が 405。
+  **これがこの repo で唯一 deploy される成果物に触る検査である。**
+- smoke 自身も落ちることを確認した: bundle が無ければ exit 2（0 とも 1 とも別）、
+  bundle の route 文字列を壊すと該当 2 項目だけが落ちる。
+
+### 検査が「落ちない」ことを見つけて直した
+
+smoke の初版は『env の値がページに出ていないこと』を `\"yoro\"` という
+引用符つきの文字列で見ていた。**この検査は構造的に落ちない** —— renderer が
+`\"` を `&quot;` に escape するので、値が漏れていても一致しないからである。
+mutation を 2 度当てて 2 度とも緑だったので気づいた（外した mutation の緑を
+実演と数えない、という規律がそのまま効いた）。印（SENTINEL-9f3a2c）を env の
+値に使う形に直し、**漏らす版の view で true、戻すと false** になることを
+確認した。ただしこの 1 件の確認は source 側の描画で行っており、bundle を
+作り直しての確認ではない —— 再ビルドしようとした時点で build lock を別
+セッションが取っていたためで、迂回はしていない。
 
 ## Consequences
 

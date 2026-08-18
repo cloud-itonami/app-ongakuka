@@ -101,6 +101,30 @@ lock を他セッションが持っていると exit 2 で拒否される。**�
 `resource-guard: build is already running (pid=…)` はエラーではなく順番待ちで
 ある。
 
+実際の出力（末尾）:
+
+```
+[:worker] Build completed. (55 files, 12 compiled, 0 warnings, 44.90s)
+```
+
+## 4.5 ビルドした成果物を実際に叩く
+
+ここが deploy されるものに触る唯一の検査である。
+
+```bash
+cd "$REPO" && npx --yes nbb scripts/smoke-worker.cljs dist/worker.js
+```
+
+```
+PASS	default export has fetch	expected=true	actual=true
+PASS	GET / status	expected=200	actual=200
+...
+PASS	wrong method	expected=405	actual=405
+OK	the built bundle answers as the route table says
+```
+
+**bundle が無ければ exit 2**（「判定できなかった」であって合格ではない）。
+
 ## 5. deploy
 
 ```bash
