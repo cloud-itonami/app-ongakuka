@@ -135,6 +135,17 @@ rest parameter `[...path]` で受けており、空文字だけを 400 にして
 
 絞りたいなら、それは移行とは別の決定として記録する。
 
+ビルド済み bundle でも 1 度確かめた（source のテストは bundle の挙動を保証しない）:
+
+    POST /xrpc/        → 400
+    POST /xrpc/a/b     → 502 {"error":"MCP router unreachable", "url":"https://mcp.etz…
+    POST /xrpc/com.x.y → 502 {"error":"MCP router unreachable", "url":"https://mcp.etz…
+
+多段は単一セグメントと同一に扱われ、上流未到達は成功と同じ形に潰れず URL 付きで
+返る。**この確認は 1 回きりの手動であり、常設の gate は unit test の方である** ——
+smoke に入れると mcp.etzhayyim.com への実 fetch に依存する検査になり、いま
+NXDOMAIN であることに寄りかかることになるので入れていない。
+
 ## Consequences
 
 - production の TypeScript は 0 本、正本言語が 4 本になった（移行前は 3 対 0）。
