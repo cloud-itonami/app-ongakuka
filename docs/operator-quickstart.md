@@ -1,10 +1,9 @@
 # operator-quickstart
 
 **この repo で今日実際にできることを、踏める形で上から書く。** 所要 5 分。
-Cloudflare のアカウントも AWS も要らない。**deploy はできない**（§4 に理由と、
-それを自分で確かめる手順）。
+Cloudflare のアカウントは要らない（deploy だけが要る。§5）。
 
-出力はすべて push 済みブランチの fresh clone を walk した実測である。
+出力はすべて実際に walk した結果である。
 
 ## 0. 前提
 
@@ -12,7 +11,7 @@ Cloudflare のアカウントも AWS も要らない。**deploy はできない*
 |---|---|---|
 | git | `git --version` | 2.51.0 |
 | nbb | `npx --yes nbb --version` | v1.4.208 |
-| dig | `dig -v` | 任意（§3 だけ） |
+| clojure | `clojure --version` | ビルド時のみ |
 
 ## 1. 取得して、書いてあることが本当か検査する
 
@@ -24,113 +23,128 @@ npx --yes nbb scripts/verify-docs-claims.cljs .
 ```
 
 末尾が `OK` なら README の数値・存在・不在は tree と一致している。
-**exit 2（UNDETERMINED）は 0 ではない** —— tree を読み切れなかったという
-別の答えで、「検査して問題なし」と混ぜない。
+**exit 2（UNDETERMINED）は 0 ではない** —— tree を読み切れなかったという別の
+答えで、「検査して問題なし」と混ぜない。
 
-## 2. deploy される handler と、あなたが開くファイルの差を見る
+この検査には移行の不変条件が入っている: TypeScript が戻っていないこと（撤去した
+8 パスの不在 + `.ts` の総数）、`wrangler.jsonc` の `main` が shadow の出力先を
+指していること、ページが route 表から描かれていること。
 
-これがこの repo で一番大事な 2 分である。
+## 2. テストを走らせる（ビルド不要・ブラウザ不要）
+
+判断（`route.cljc`）と描画（`view.cljc`）は純 `.cljc` なので、nbb だけで回る。
 
 ```bash
-cd "$REPO/appview/etzhayyim-wasm-ongakuka-0ng4k4k4"
-
-# (a) Worker の入口はどれか
-grep '"main"' wrangler.jsonc
-# (b) それは tree に在るか
-test -e svelte/.svelte-kit/cloudflare/_worker.js && echo "在る" || echo "無い（ビルド出力）"
-# (c) svelte 側は src/app.ts を参照しているか
-grep -rn 'app\.ts\|kotodama-host-sdk' svelte/ | wc -l
-# (d) app.ts が import する SDK を宣言している package.json はあるか
-grep -rl 'kotodama-host-sdk' --include=package.json . | wc -l
+K=~/github/com-junkawasaki/orgs/kotoba-lang
+CP="src:test:$K/jp-go-digital-design-system/src:$K/html/src:$K/css/src"
+cat > /tmp/run.cljs <<'EOF'
+(require '[cljs.test :refer [run-tests]] 'ongakuka.route-test)
+(run-tests 'ongakuka.route-test)
+EOF
+npx --yes nbb --classpath "$CP" /tmp/run.cljs
 ```
 
 実際の出力:
 
 ```
-  "main": "svelte/.svelte-kit/cloudflare/_worker.js",
-無い（ビルド出力）
-       0
-       0
+Testing ongakuka.route-test
+
+Ran 5 tests containing 21 assertions.
+0 failures, 0 errors.
 ```
 
-読み方: **deploy されるのは SvelteKit のビルド出力**で、`src/app.ts`
-（`compose` / `/blobs/:key` / actor DID 登録 / BPMN proxy が書いてある
-5,460 バイト）は**そこから参照されておらず、依存として宣言もされていない**。
-app.ts を読んでこの appview の挙動を推測すると外れる。
+何を固定しているか: `/xrpc/` は**単一セグメントの nsid だけ**通す（`/xrpc/` と
+`/xrpc/a/b` は 400。前方一致で素通ししない）、MCP router の URL 解決（空白だけの
+設定は未設定として扱う）、`result` / `structuredContent` の剥がし方、そして
+**ページが route 表から描かれること**（固定値を焼いていたら落ちる）。
 
-続けて、公開ページが自分の設定と矛盾していることを見る:
+## 3. ページを描画して採点する
 
 ```bash
-grep -E '"routeCount"|"routes": \[\]|"vars": \[\]' svelte/src/routes/+page.svelte
-python3 -c "
-import json,re
-s=re.sub(r'^\s*//.*$','',open('wrangler.jsonc',encoding='utf8').read(),flags=re.M)
-j=json.loads(s); print('wrangler declares vars:',len(j['vars']),'routes:',len(j['routes']))"
+K=~/github/com-junkawasaki/orgs/kotoba-lang
+CP="src:$K/jp-go-digital-design-system/src:$K/html/src:$K/css/src"
+cat > /tmp/render.cljs <<'EOF'
+(require '["node:fs" :as fs] '[ongakuka.view :as view] '[ongakuka.route :as route])
+(let [css (.readFileSync fs (str (.-DDS js/process.env) "/resources/jp_go_dds/dds.css") "utf8")]
+  (.writeFileSync fs "/tmp/ong-page.html"
+    (view/render {:css css :routes route/routes
+                  :vars [:APP_NANOID :APP_UI_TYPE]
+                  :mcp-url "https://mcp.etzhayyim.com/xrpc/com.etzhayyim.mcp.message"}))
+  (println "ok"))
+EOF
+DDS="$K/jp-go-digital-design-system" npx --yes nbb --classpath "$CP" /tmp/render.cljs
+
+cd $K/design-quality && npx --yes nbb -m design-quality.cli score /tmp/ong-page.html --min 95
 ```
 
+実際の出力（末尾）:
+
 ```
-  "routeCount": 0,
-  "routes": [],
-  "vars": [],
-wrangler declares vars: 8 routes: 2
+  100.00  /tmp/ong-page.html
+aggregate: 100.00
+gate: aggregate 100.00 >= min 95.00 -> PASS
 ```
 
-ページは訪問者に「Routes 0」「No public route is declared next to this app
-surface」「No public vars are declared in the nearest wrangler config」と
-表示するが、**同じディレクトリの設定は route 2・var 8 を宣言している**。
-ページの値は生成物ではなく `+page.svelte` に literal で焼かれている。
+## 4. bundle をビルドする
 
-## 3. 呼び先が生きているか見る
+**高負荷ビルドは同時 1 本に制限されている**（superproject `CLAUDE.md` の
+resource governor）。直接叩かず、必ず guard 経由で:
 
 ```bash
-for h in ongakuka.etzhayyim.com ong4k4k4.etzhayyim.com \
-         mcp.etzhayyim.com dispatcher.etzhayyim.com; do
-  printf '%-28s %s\n' "$h" "$(dig +short $h | head -1 || true)"
-done
+cd "$REPO"
+node ~/github/com-junkawasaki/scripts/resource-guard.mjs run build -- \
+  npx shadow-cljs release worker
+ls -la dist/worker.js
 ```
 
-実際の出力（値が空 = A レコード無し）:
+lock を他セッションが持っていると exit 2 で拒否される。**迂回しない** ——
+`resource-guard: build is already running (pid=…)` はエラーではなく順番待ちで
+ある。
+
+実際の出力（末尾）:
 
 ```
-ongakuka.etzhayyim.com
-ong4k4k4.etzhayyim.com
-mcp.etzhayyim.com
-dispatcher.etzhayyim.com
+[:worker] Build completed. (55 files, 12 compiled, 0 warnings, 44.90s)
 ```
 
-4 つとも解決しない。**deploy 先も、deploy されたコードが呼ぶ相手も無い。**
-`+server.ts` は XRPC を `mcp.etzhayyim.com` へ中継し、`app.ts` は
-`dispatcher.etzhayyim.com` へ POST する。
+## 4.5 ビルドした成果物を実際に叩く
 
-## 4. ビルドと deploy —— この周では走らせていない
-
-`svelte/package.json` に `build` script は在る（`vite build`）。
-**この walk では実行していない。** 理由は 2 つあり、どちらも正直に書く:
-
-1. **lockfile が 0 件**で、`npm install` は解決結果が walk のたびに変わる。
-2. この workspace は高負荷ビルドを同時 1 本に制限しており
-   （superproject `CLAUDE.md` の resource governor）、この周は別セッションが
-   lock を保持していた。実際に拒否された:
+ここが deploy されるものに触る唯一の検査である。
 
 ```bash
-cd "$REPO/appview/etzhayyim-wasm-ongakuka-0ng4k4k4/svelte"
-node ~/github/com-junkawasaki/scripts/resource-guard.mjs run build -- npm install
-# resource-guard: build is already running (pid=…, repo=…/cloud-murakumo)
-# exit 2
+cd "$REPO" && npx --yes nbb scripts/smoke-worker.cljs dist/worker.js
 ```
 
-**迂回して直接 `npm install` を叩かないこと。** 走らせたい時は上のコマンドを
-lock が空いてから使う。なお §2 の結論（app.ts がビルド対象に入っていない）は
-ビルドの成否とは無関係に、宣言だけで決まっている。
+```
+PASS	default export has fetch	expected=true	actual=true
+PASS	GET / status	expected=200	actual=200
+...
+PASS	wrong method	expected=405	actual=405
+OK	the built bundle answers as the route table says
+```
 
-deploy は `wrangler deploy` だが、**route が指すゾーンのホストが解決しない**
-ので、成功しても誰も到達できない。superproject の deploy guard は
-`origin/main` を含む checkout からの deploy しか許さない点も併せて注意。
+**bundle が無ければ exit 2**（「判定できなかった」であって合格ではない）。
 
-## 5. ここに無いもの
+## 5. deploy
 
-- **テスト 0 本**、CI 無し、lockfile 無し
+```bash
+cd "$REPO/appview/etzhayyim-wasm-ongakuka-0ng4k4k4"
+npx wrangler deploy
+```
+
+**ただし route が指すホストは解決しない**（`ongakuka.etzhayyim.com` /
+`ong4k4k4.etzhayyim.com` とも NXDOMAIN）。deploy が成功しても誰も到達できない。
+`/xrpc/` の中継先 `mcp.etzhayyim.com` も同様なので、到達できたとしても中継は
+**502 を返す**（成功と同じ形で隠さない）。
+
+superproject の deploy guard は `origin/main` を含む checkout からの deploy しか
+許さない点も併せて注意。
+
+## 6. ここに無いもの
+
+- `compose` / `/blobs/:key` / `listTracks` —— 移行前の `src/app.ts` にあり、
+  どこにも deploy されていなかった経路。宛先が NXDOMAIN、または binding が
+  `wrangler.jsonc` に無いので**持ち越していない**（README の「持ち越さなかった
+  もの」）
 - 生成そのもの（murakumo の audio 推論側にある）
-- `listTracks` の実装 —— 空配列と `Phase 0 stub` の note を返すだけで、
-  「まだ実装していない」と「1 曲も無い」が呼び出し側から区別できない
-- `MIGRATION-TODO.md` の 7 項目の憲章適合レビュー（全部未チェック）
+- `MIGRATION-TODO.md` の 7 項目の憲章適合レビュー

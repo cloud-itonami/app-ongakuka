@@ -1,0 +1,113 @@
+[{:db/id -1
+  :adr/id "app-ongakuka-0002"
+  :adr/title "appview を TypeScript/Svelte から ClojureScript へ移す"
+  :adr/status "accepted"
+  :adr/date "2026-08-18"
+  :adr/doc_type "adr"
+  :adr/source-format "edn"
+  :adr/supersedes "app-ongakuka-0001 の Open questions（どちらの TS が正本か / いつ cljs へ移すか）"
+  :adr/body "
+# ADR-0002: appview を TypeScript/Svelte から ClojureScript へ移す
+
+**Status**: accepted / **Date**: 2026-08-18 / **Deciders**: Jun Kawasaki
+
+## Context
+
+ADR-0001 は測って 3 つの欠陥を記録した: (1) deploy される handler
+（SvelteKit のビルド出力）と読み手が開くファイル（src/app.ts）が別、
+(2) 公開ページが同じディレクトリの wrangler.jsonc と矛盾（Routes 0 と表示、
+設定は route 2 / var 8）、(3) app.ts はどの package.json からも宣言されず
+ビルド不能。
+
+ADR-0001 の初版は Open question を『正本は app.ts か SvelteKit か』と書いたが、
+オーナーがこれを退けた。**この workspace の正本言語は cljs と kotoba である。**
+superproject CLAUDE.md の runtime 順序は kotoba wasm > clojurewasm >
+ClojureScript > nbb で、TypeScript はそこに無い。候補の 2 つはどちらも
+TypeScript なので、どちらを選んでも正本には着地しない。
+
+## Decision
+
+**appview を ClojureScript に移し、TypeScript と Svelte を撤去する。**
+
+    src/ongakuka/route.cljc    判断（どの handler が答えるか）
+    src/ongakuka/view.cljc     ページ（jp-go-dds の hiccup）
+    src/ongakuka/worker.cljs   Request/Response に触る唯一の層
+            ↓ shadow-cljs :target :esm
+    dist/worker.js             wrangler.jsonc の main が指すもの
+
+先例は同じ org の cloud-itonami-marketplace-listing
+（src/listingops/*.cljc → shadow-cljs :esm → dist/worker.js）。実測 2026-08-18、
+cloud-itonami の checkout 済み repo で shadow-cljs を持つ appview は 87 本。
+
+入口を .kotoba ではなく cljs に置くのは ADR-2606290000 の判断で、kotoba の
+ingress capability が :native-aot / :wasm-aot とも pending だからである。
+判断を .cljc に切り出してあるのは、ブラウザもビルドも無しにテストするためで
+あり、ingress が qualify した時に最初に .kotoba へ移る部分だからでもある。
+
+### これで消えた欠陥
+
+- (1) は構造的に消えた。main が指す bundle は src/ からコンパイルされる。
+- (2) も構造的に消えた。ページは route 表（ongakuka.route/routes）を引数で
+  受け取って描く。表示と実際に答えるものが同じ 1 つの値から出る。
+- (3) は消えた。依存は deps.edn に宣言され、bundle は再現可能にビルドできる。
+
+### 持ち越さなかった経路（黙って消していない）
+
+app.ts にあってどこにも deploy されていなかったもののうち、compose
+（宛先 dispatcher.etzhayyim.com が NXDOMAIN）、/blobs/:key（B2 の binding が
+wrangler.jsonc に無い）、listTracks（空配列と『Phase 0 stub』の note を返す
+だけで、未実装と 0 件が呼び出し側から区別できない）は**移していない**。
+動かない経路を移植して『移行済み』と言わないためである。必要になった時点で
+route.cljc に足し、テストと binding を伴って戻す。
+
+### UI
+
+基盤は jp-go-digital-design-system（skill kotoba-uiux が定める新規 UI の base）。
+色・寸法は --hig-* トークン契約のみ、app 固有 CSS は 3 行。CSS は
+shadow.resource/inline で bundle に焼く（design system の外部リクエストゼロ
+方針）。決定論的 audit で 100.00 / 100（gate 95）。
+
+## 検証（この ADR を書いた時点で実際に通したもの）
+
+- ongakuka.route-test: 5 tests / 21 assertions、0 failures（nbb、ビルド不要）
+- ページ描画 → design-quality score 100.00、gate PASS
+- scripts/verify-docs-claims.cljs: 12 claim すべて PASS、exit 0
+- 検証器を 5 通りの mutation で落とした: 撤去したパスに .ts が戻る /
+  別名の .ts が入る / wrangler の main をビルド出力以外に向ける /
+  shadow の export を別 ns にする / view が route 表でなく固定値を描く。
+  それぞれ対応する claim だけが落ちることを確認した。
+
+- **bundle をビルドし、実際に叩いた。** shadow-cljs release worker が
+  55 files / 12 compiled / 0 warnings / 44.9s で通り、dist/worker.js（245 KB）を
+  出した。scripts/smoke-worker.cljs がそれを import して 14 項目を確認:
+  default export が fetch を持つ / GET / が 200 の HTML で route 表の全 path を
+  載せている / env のキーは出て値は出ない / DADS の CSS が bundle に焼かれている
+  / GET /health が 200 で自分の route を名乗る / POST /xrpc/ が 400（前方一致で
+  素通ししない）/ OPTIONS が 204 / 未知パスが 404 / 誤 method が 405。
+  **これがこの repo で唯一 deploy される成果物に触る検査である。**
+- smoke 自身も落ちることを確認した: bundle が無ければ exit 2（0 とも 1 とも別）、
+  bundle の route 文字列を壊すと該当 2 項目だけが落ちる。
+
+### 検査が「落ちない」ことを見つけて直した
+
+smoke の初版は『env の値がページに出ていないこと』を `\"yoro\"` という
+引用符つきの文字列で見ていた。**この検査は構造的に落ちない** —— renderer が
+`\"` を `&quot;` に escape するので、値が漏れていても一致しないからである。
+mutation を 2 度当てて 2 度とも緑だったので気づいた（外した mutation の緑を
+実演と数えない、という規律がそのまま効いた）。印（SENTINEL-9f3a2c）を env の
+値に使う形に直し、**漏らす版の view で true、戻すと false** になることを
+確認した。ただしこの 1 件の確認は source 側の描画で行っており、bundle を
+作り直しての確認ではない —— 再ビルドしようとした時点で build lock を別
+セッションが取っていたためで、迂回はしていない。
+
+## Consequences
+
+- production の TypeScript は 0 本、正本言語が 4 本になった（移行前は 3 対 0）。
+  この 2 つは検証器の claim なので、TS が戻れば落ちる —— 撤去した 8 パスに戻る
+  場合と別名で入る場合を別々の claim が捕まえる。
+- 継承した 7 ファイルは 1 バイトも変わっていない（sha256 を検証器に固定）。
+  wrangler.jsonc だけは意図的に変更した（main の付け替え、消えた SvelteKit
+  client を指す assets の撤去、APP_FRAMEWORK の更新）。
+- ホストは相変わらず NXDOMAIN である。移行はそれを直さない。deploy するか
+  retire するかは別の決定。
+"}]
