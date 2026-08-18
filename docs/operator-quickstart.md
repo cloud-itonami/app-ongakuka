@@ -113,6 +113,7 @@ dispatcher.etzhayyim.com
    lock を保持していた。実際に拒否された:
 
 ```bash
+cd "$REPO/appview/etzhayyim-wasm-ongakuka-0ng4k4k4/svelte"
 node ~/github/com-junkawasaki/scripts/resource-guard.mjs run build -- npm install
 # resource-guard: build is already running (pid=…, repo=…/cloud-murakumo)
 # exit 2
