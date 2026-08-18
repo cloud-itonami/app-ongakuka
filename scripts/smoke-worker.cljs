@@ -80,7 +80,17 @@
                 (check! "page hides other var values" false (str/includes? (:body page) sentinel))
                 (check! "page shows the relay target it uses" true (str/includes? (:body page) router-url))
                 ;; DDS の CSS が bundle に焼かれている
-                (check! "page carries the design system" true (str/includes? (:body page) "dads-table"))
+                ;; **2 つに割る。** 「dads-table が在る」は落ちない検査だった ——
+                ;; それは view が出力する markup であって、CSS が 1 バイトも
+                ;; 入っていないページにも現れる。実測 2026-08-18（この repo の
+                ;; ページで）: `dads-table` は css 込み 74 / css 無し **6**（0 に
+                ;; ならない）。`--color-primitive-blue` は 45 / **0**。
+                ;; 前者は「view がライブラリを呼んだ」、後者は「stylesheet が
+                ;; 実際に入った」——別の主張なので別の検査にする。
+                (check! "page uses the design system components" true
+                        (str/includes? (:body page) "class=\"dads-table\""))
+                (check! "page carries the stylesheet itself" true
+                        (str/includes? (:body page) "--color-primitive-blue"))
                 (check! "GET /health status" 200 (:status health))
                 (check! "health names its routes" true (str/includes? (:body health) "/xrpc/:nsid"))
                 ;; nsid 無しの XRPC は 400。前方一致で素通ししない
