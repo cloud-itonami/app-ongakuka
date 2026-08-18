@@ -28,6 +28,20 @@
     (is (= "https://b.example" (route/mcp-router-url {:AGENTGATEWAY_MCP_ROUTER_URL "   "
                                                      :MCP_ROUTER_URL "https://b.example"})))))
 
+(deftest relay-headers-forwards-what-it-received
+  (testing "移行前は host を削るだけで、authorization も上流へ届いていた"
+    (let [h (route/relay-headers [["Host" "x.example"]
+                                  ["Authorization" "Bearer t"]
+                                  ["Content-Length" "9"]
+                                  ["X-Trace" "abc"]]
+                                 "com.a.b")]
+      (is (= "Bearer t" (get h "authorization"))
+          "authorization が落ちている —— preflight はこれを許可すると言っている")
+      (is (= "abc" (get h "x-trace")))
+      (is (nil? (get h "host")) "host は宛先が変わるので渡さない")
+      (is (nil? (get h "content-length")) "body を詰め直すので元の長さは嘘になる")
+      (is (= "com.a.b" (get h "x-etzhayyim-xrpc-method"))))))
+
 (deftest unwrap
   (is (= {:ok? true :value {:a 1}} (route/unwrap-mcp {:result {:structuredContent {:a 1}}})))
   (is (= {:ok? true :value {:a 1}} (route/unwrap-mcp {:result {:a 1}})))
