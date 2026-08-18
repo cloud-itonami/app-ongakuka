@@ -5,10 +5,6 @@
   // TypeScript a reader opened was in no bundle at all -- see docs/adr/0002.
   "main": "../../dist/worker.js",
   "compatibility_date": "2025-03-17",
-  "compatibility_flags": [
-    "nodejs_compat",
-    "nodejs_als"
-  ],
   "vars": {
     "APP_CAPABILITIES": "[\"music-generation\",\"instrumental\",\"audio-synthesis\"]",
     "APP_DESCRIPTION": "AI music generation (Suno-class). Phase 0: instrumental tracks via Murakumo MusicGen-small. Phase 1+: vocals + stems via DiffRhythm/YuE. Multi-DID actor composition: lyricist/composer/vocalist/arranger/mixer/critic.",

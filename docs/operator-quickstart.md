@@ -125,6 +125,29 @@ OK	the built bundle answers as the route table says
 
 **bundle が無ければ exit 2**（「判定できなかった」であって合格ではない）。
 
+## 4.6 Workers ランタイム（workerd）で動かす
+
+Node で import する smoke より強い検査。実際の workerd で起こす。
+
+```bash
+cd "$REPO/appview/etzhayyim-wasm-ongakuka-0ng4k4k4"
+npx --yes wrangler@latest dev --local --port 8799 --ip 127.0.0.1
+# 別シェルで
+curl -s -o /dev/null -w '%{http_code} %{content_type}\n' http://127.0.0.1:8799/
+curl -s http://127.0.0.1:8799/health
+```
+
+実際の出力:
+
+```
+200 text/html; charset=utf-8
+{"ok":true,"app":"ongakuka","runtime":"cljs","routes":["/","/health","/xrpc/:nsid"]}
+```
+
+`compatibility_flags`（`nodejs_compat` / `nodejs_als`）は SvelteKit の
+adapter-cloudflare 由来で、この bundle には要らない。**撤去は憶測ではなく
+この実測で確かめてから行った。**
+
 ## 5. deploy
 
 ```bash
