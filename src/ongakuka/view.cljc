@@ -36,7 +36,7 @@
 (defn body
   "opts:
    :routes    ongakuka.route/routes（この Worker が実際に答えるもの）
-   :vars      wrangler が渡した env のキー（値は出さない）
+   :vars      wrangler が渡した env のキー（**キー名だけ**。値は出さない）
    :mcp-url   XRPC の中継先（route/mcp-router-url の戻り値）
    :built-at  bundle のビルド時刻（不明なら nil）"
   [{:keys [routes vars mcp-url built-at]}]
@@ -62,7 +62,11 @@
     (if (seq vars)
       [:div (into [:p] (interpose " "
                                   (map (fn [k] (dds/chip-label (name k))) vars)))
-       [:p {:class "ong-note"} "キー名のみ。値は出さない。"]]
+       [:p {:class "ong-note"}
+       "キー名のみ。**ただし下の中継先だけは値そのもの**（"
+       [:span {:class "ong-mono"} "AGENTGATEWAY_MCP_ROUTER_URL"]
+       "）—— どこへ中継するかは運用者が見る必要があるので意図的に出している。"
+       "それ以外の値は出さない。"]]
       [:p {:class "ong-note"} "env が渡されていない（ローカル描画）。"])
     [:p {:class "ong-note"} "XRPC の中継先: "
      [:span {:class "ong-mono"} mcp-url]])

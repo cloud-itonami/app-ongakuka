@@ -37,7 +37,14 @@
   つまり検査が構造的に落ちなくなる。実測でこれを踏んだので印を使う。"
   "SENTINEL-9f3a2c")
 
-(def env #js {"APP_NANOID" "ong4k4k4" "APP_UI_TYPE" sentinel})
+(def router-url
+  "中継先は **値そのもの** がページに出る。ここを .invalid（RFC 2606 で必ず
+  解決しない TLD）にしておくと、出ていることを実 DNS に依存せず確かめられる。"
+  "https://mcp.example.invalid/xrpc/probe")
+
+(def env #js {"APP_NANOID" "ong4k4k4"
+              "APP_UI_TYPE" sentinel
+              "AGENTGATEWAY_MCP_ROUTER_URL" router-url})
 
 (defn- call [h method path]
   (let [req (js/Request. (str "https://ongakuka.etzhayyim.com" path) #js {:method method})]
@@ -65,7 +72,13 @@
                   (check! (str "page advertises " p) true (str/includes? (:body page) p)))
                 ;; env のキーは出す、値は出さない
                 (check! "page shows a var key" true (str/includes? (:body page) "APP_NANOID"))
-                (check! "page hides var values" false (str/includes? (:body page) sentinel))
+                ;; 表示する値と表示しない値を **別々の印で** 見る。片方だけだと
+                ;; 「全部隠す」実装も「全部出す」実装も通ってしまう。
+                ;; 実測 2026-08-18: このページは以前『キー名のみ。値は出さない』と
+                ;; 書きながら中継先の値を出していた。sentinel が別の var に
+                ;; 付いていたので、実際に出ている唯一の値を検査できていなかった。
+                (check! "page hides other var values" false (str/includes? (:body page) sentinel))
+                (check! "page shows the relay target it uses" true (str/includes? (:body page) router-url))
                 ;; DDS の CSS が bundle に焼かれている
                 (check! "page carries the design system" true (str/includes? (:body page) "dads-table"))
                 (check! "GET /health status" 200 (:status health))
