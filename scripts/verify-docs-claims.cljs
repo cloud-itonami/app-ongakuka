@@ -22,7 +22,9 @@
 
 (def claims
   {:tracked-files 21
-   :inherited-bytes 15584          ; the 7 inherited files still carried unchanged
+   :inherited-bytes 6675           ; the 6 inherited files still carried unchanged
+   :svelte-artifacts 0             ; no .svelte / svelte.config / svelte-dir file survives
+   :sveltekit-compat-flags 0       ; nodejs_compat / nodejs_als were adapter-cloudflare's
    :production-ts-files 0
    :production-canonical-files 4
    :declared-vars 8
@@ -33,9 +35,11 @@
 
 ;; Inherited files this repository still carries BYTE-IDENTICAL. wrangler.jsonc left
 ;; this set deliberately in the migration and is checked by content below instead.
+;; CLAUDE.md left this set deliberately: it described the runtime as "TS Native
+;; (src/app.ts)" and the frontend as "Hono router + Svelte CSR", both of which the
+;; migration made false. Checked by content below instead of by hash.
 (def preserved
-  {"CLAUDE.md" "ae633f76c2a06ec9cd5947967fecd9015e23c91fdcff250494e7f7aea54e1797"
-   "MIGRATION-TODO.md" "793d1da2f465cd692205ebc1d8b38cc6c50502b525226255f74d9a858cd6761f"
+  {"MIGRATION-TODO.md" "793d1da2f465cd692205ebc1d8b38cc6c50502b525226255f74d9a858cd6761f"
    "NOTICE" "bae68743feb911cbedcc745b136e444d3595854e4324f59e7cc9438ccda13d49"
    "PROJECT.jsonld" "d9c248b581dd52518c8e5d43f1f0078890a1e9f768f23111153fc7849e58ca58"
    "README.edn" "8a03a25c86d9e7f052aa476acadb7c701f3dc35d4466b014caec51d9abe8259c"
@@ -97,6 +101,25 @@
     (check! :removed-by-migration-absent []
             (vec (filter #(some? (bytes-of %)) removed-by-migration)))
 
+    ;; Svelte is gone and must not come back. The removed-by-migration list names
+    ;; the eight files; these two catch a return under ANY name -- a new .svelte
+    ;; file, a svelte.config, a svelte/ directory, or the compat flags that only
+    ;; adapter-cloudflare needed.
+    (check! :svelte-artifacts (:svelte-artifacts claims)
+            (count (filter #(or (str/ends-with? % ".svelte")
+                                (str/includes? % "svelte.config")
+                                (str/includes? % "/svelte/"))
+                           files)))
+
+    ;; CLAUDE.md no longer plans a Svelte frontend or claims a TypeScript runtime
+    (let [c (slurp* "CLAUDE.md")]
+      (if (nil? c)
+        (undet! "CLAUDE.md unreadable")
+        (check! :claude-md-describes-cljs true
+                (and (not (str/includes? c "Svelte CSR"))
+                     (not (str/includes? c "App Component (TS Native)"))
+                     (str/includes? c "shadow-cljs")))))
+
     ;; language of the production source, the two numbers the owner's correction added
     (let [prod (remove #(str/starts-with? % "scripts/") files)]
       (check! :production-ts-files (:production-ts-files claims)
@@ -115,6 +138,9 @@
           (check! :declared-routes (:declared-routes claims) (count (get j "routes")))
           ;; the old config served a SvelteKit client dir that no longer exists
           (check! :no-stale-assets-binding true (nil? (get j "assets")))
+          (check! :sveltekit-compat-flags (:sveltekit-compat-flags claims)
+                  (count (filter #{"nodejs_compat" "nodejs_als"}
+                                 (or (get j "compatibility_flags") []))))
           (check! :shadow-builds-that-main true
                   (and (str/includes? sh (str ":output-dir \"" (:shadow-output-dir claims) "\""))
                        (str/includes? sh (:shadow-export claims))

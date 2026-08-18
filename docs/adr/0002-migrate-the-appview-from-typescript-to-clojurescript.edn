@@ -100,6 +100,28 @@ mutation を 2 度当てて 2 度とも緑だったので気づいた（外し�
 作り直しての確認ではない —— 再ビルドしようとした時点で build lock を別
 セッションが取っていたためで、迂回はしていない。
 
+## 追記（2026-08-18）— Svelte 残骸の撤去と workerd での実測
+
+移行で Svelte の**ファイル**は消えたが、残骸が 2 つ残っていた。
+
+1. wrangler.jsonc の compatibility_flags（nodejs_compat / nodejs_als）。これは
+   SvelteKit の adapter-cloudflare が要求していたもので、cljs の :esm bundle には
+   要らない。**憶測で消さず、workerd で実測してから撤去した** ——
+   `wrangler dev --local` で flags 無しの設定のまま起動し、GET / が 200 の HTML
+   （DADS の CSS と route 表を含む）、GET /health が 200 で自分の route を名乗り、
+   POST /xrpc/ が 400、OPTIONS が 204、未知パスが 404 を返すことを確認した。
+   これは Node で bundle を import する smoke より強い証拠である（実際の
+   Workers ランタイムで動かしているため）。
+2. CLAUDE.md が Runtime を『TS Native (src/app.ts)』、Frontend を
+   『Hono router + Svelte CSR』と書いていた。どちらも移行で偽になったので更新した。
+   このファイルは custody の byte 一致集合から外し、**内容で検査する**形にした
+   （wrangler.jsonc と同じ扱い）。意図的な変更と勝手な変更を区別するためである。
+
+検証器に Svelte が戻ってきたら落ちる claim を足し、4 経路すべてで実際に落として
+確認した: .svelte ファイルが戻る / svelte.config.js が戻る（撤去リストに無い名前
+でも捕まる）/ compatibility_flags に nodejs_compat が戻る / CLAUDE.md が Svelte
+計画に戻る。
+
 ## Consequences
 
 - production の TypeScript は 0 本、正本言語が 4 本になった（移行前は 3 対 0）。
