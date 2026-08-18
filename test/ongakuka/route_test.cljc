@@ -13,9 +13,9 @@
   (testing "単一セグメントの nsid だけ通す"
     (is (= {:action :xrpc :nsid "com.etzhayyim.ongakuka.listTracks"}
            (route/dispatch "POST" "/xrpc/com.etzhayyim.ongakuka.listTracks"))))
-  (testing "nsid が無い / 多段は 400。前方一致で素通ししない"
+  (testing "空だけが 400。多段は移行前と同じく転送する（絞るのは方針変更）"
     (is (= :bad-request (:action (route/dispatch "POST" "/xrpc/"))))
-    (is (= :bad-request (:action (route/dispatch "POST" "/xrpc/a/b")))))
+    (is (= {:action :xrpc :nsid "a/b"} (route/dispatch "POST" "/xrpc/a/b"))))
   (testing "preflight と method"
     (is (= :cors-preflight (:action (route/dispatch "OPTIONS" "/xrpc/x"))))
     (is (= :method-not-allowed (:action (route/dispatch "GET" "/xrpc/x"))))))
