@@ -1,5 +1,5 @@
 (ns ongakuka.route-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.lang.text] [clojure.test :refer [deftest is testing]]
             [ongakuka.route :as route]
             [ongakuka.view :as view]))
 
@@ -65,8 +65,8 @@
                              :vars [:APP_NANOID :APP_UI_TYPE]
                              :mcp-url "https://mcp.example/x"})]
       (doseq [r route/routes]
-        (is (clojure.string/includes? html (:route/path r))
+        (is (kotoba.lang.text/includes? html (:route/path r))
             (str (:route/path r) " がページに出ていない")))
-      (is (clojure.string/includes? html "APP_NANOID"))
-      (is (clojure.string/includes? html "https://mcp.example/x"))
-      (is (not (clojure.string/includes? html "No public route is declared"))))))
+      (is (kotoba.lang.text/includes? html "APP_NANOID"))
+      (is (kotoba.lang.text/includes? html "https://mcp.example/x"))
+      (is (not (kotoba.lang.text/includes? html "No public route is declared"))))))
