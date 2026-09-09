@@ -21,7 +21,7 @@
 (def APP "appview/etzhayyim-wasm-ongakuka-0ng4k4k4")
 
 (def claims
-  {:tracked-files 21
+  {:tracked-files 22
    :inherited-bytes 6675           ; the 6 inherited files still carried unchanged
    :svelte-artifacts 0             ; no .svelte / svelte.config / svelte-dir file survives
    :sveltekit-compat-flags 0       ; nodejs_compat / nodejs_als were adapter-cloudflare's
