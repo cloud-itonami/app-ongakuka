@@ -29,9 +29,9 @@ TypeScript なので、どちらを選んでも正本には着地しない。
 
 **appview を ClojureScript に移し、TypeScript と Svelte を撤去する。**
 
-    src/ongakuka/route.cljc    判断（どの handler が答えるか）
-    src/ongakuka/view.cljc     ページ（jp-go-dds の hiccup）
-    src/ongakuka/worker.cljs   Request/Response に触る唯一の層
+    src/ongakuka/route.cljk    判断（どの handler が答えるか）
+    src/ongakuka/view.cljk     ページ（jp-go-dds の hiccup）
+    src/ongakuka/worker.cljk   Request/Response に触る唯一の層
             ↓ shadow-cljs :target :esm
     dist/worker.js             wrangler.jsonc の main が指すもの
 
@@ -71,7 +71,7 @@ shadow.resource/inline で bundle に焼く（design system の外部リクエ�
 
 - ongakuka.route-test: 5 tests / 21 assertions、0 failures（nbb、ビルド不要）
 - ページ描画 → design-quality score 100.00、gate PASS
-- scripts/verify-docs-claims.cljs: 12 claim すべて PASS、exit 0
+- scripts/verify-docs-claims.cljk: 12 claim すべて PASS、exit 0
 - 検証器を 5 通りの mutation で落とした: 撤去したパスに .ts が戻る /
   別名の .ts が入る / wrangler の main をビルド出力以外に向ける /
   shadow の export を別 ns にする / view が route 表でなく固定値を描く。
@@ -79,7 +79,7 @@ shadow.resource/inline で bundle に焼く（design system の外部リクエ�
 
 - **bundle をビルドし、実際に叩いた。** shadow-cljs release worker が
   55 files / 12 compiled / 0 warnings / 44.9s で通り、dist/worker.js（245 KB）を
-  出した。scripts/smoke-worker.cljs がそれを import して 14 項目を確認:
+  出した。scripts/smoke-worker.cljk がそれを import して 14 項目を確認:
   default export が fetch を持つ / GET / が 200 の HTML で route 表の全 path を
   載せている / env のキーは出て値は出ない / DADS の CSS が bundle に焼かれている
   / GET /health が 200 で自分の route を名乗る / POST /xrpc/ が 400（空の nsid のみ）/ OPTIONS が 204 / 未知パスが 404 / 誤 method が 405。

@@ -7,14 +7,14 @@ appview。** 名前が機能を示さないので先に名乗る（この worksp
 
 `etzhayyim/root` の `60-apps/etzhayyim-project-ongakuka` からの抽出物で、
 **2026-08-18 に TypeScript/Svelte から ClojureScript へ移行した**（ADR-0002）。
-数字はすべて `scripts/verify-docs-claims.cljs` が tree から再計算して検査する。
+数字はすべて `scripts/verify-docs-claims.cljk` が tree から再計算して検査する。
 
 ## deploy されるものは、いま読んでいるソースである
 
 ```
-src/ongakuka/route.cljc    判断（どの handler が答えるか）  ← 純 .cljc、テスト対象
-src/ongakuka/view.cljc     ページ（jp-go-dds の hiccup）    ← 純 .cljc、テスト対象
-src/ongakuka/worker.cljs   Request/Response に触る唯一の層
+src/ongakuka/route.cljk    判断（どの handler が答えるか）  ← 純 .cljc、テスト対象
+src/ongakuka/view.cljk     ページ（jp-go-dds の hiccup）    ← 純 .cljc、テスト対象
+src/ongakuka/worker.cljk   Request/Response に触る唯一の層
         ↓ shadow-cljs :target :esm
 dist/worker.js             ← wrangler.jsonc の "main" が指すもの
 ```
@@ -22,7 +22,7 @@ dist/worker.js             ← wrangler.jsonc の "main" が指すもの
 移行前は `main` が SvelteKit のビルド出力を指し、読み手が開く `src/app.ts` は
 **どの bundle にも入っていなかった**（ADR-0001 が測って記録した）。いまは
 `main` が指す bundle が上のソースからコンパイルされたものなので、その形は
-構造的に起こり得ない。`scripts/verify-docs-claims.cljs` が
+構造的に起こり得ない。`scripts/verify-docs-claims.cljk` が
 **shadow の出力先と wrangler の `main` と export の ns 名の 3 つが噛み合って
 いること**を検査し、噛み合わなくなれば落ちる。
 
@@ -49,7 +49,7 @@ route 表を渡す側が持ち、ページは描くだけなので、両者が�
 | 面 | ファイル |
 |---|---|
 | 判断・描画・edge | `src/ongakuka/{route.cljc, view.cljc, worker.cljs}` |
-| テスト | `test/ongakuka/route_test.cljc`（5 tests / 21 assertions） |
+| テスト | `test/ongakuka/route_test.cljk`（5 tests / 21 assertions） |
 | ビルド | `deps.edn` / `shadow-cljs.edn` |
 | Worker 設定 | `appview/…/wrangler.jsonc` |
 | actor 記述子 | `appview/…/kotodama.jsonld` |
@@ -149,7 +149,7 @@ design-quality のスコアはこの区別をしない（デザインシステ�
 ## 検証
 
 ```bash
-nbb scripts/verify-docs-claims.cljs .          # <dir> は先頭に置く
+nbb scripts/verify-docs-claims.cljk .          # <dir> は先頭に置く
 ```
 
 exit 0 = 全一致 / 1 = 食い違い / **2 = 判定できなかった**（0 と区別する）。

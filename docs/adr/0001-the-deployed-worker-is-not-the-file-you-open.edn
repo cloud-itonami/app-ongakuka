@@ -86,7 +86,7 @@ MIGRATION-TODO.md の 7 項目のチェックボックスは全て未チェッ�
 1. **測ったことを README.md と docs/operator-quickstart.md に書き、欠陥は
    直さずに名指しする。** 発見 1〜3 の修理は移行の順番という決定を先に要する
    （下記の訂正節）。読めない状態のまま直すより、読める状態にしてから決める方が安い。
-2. **数値は検証器に固定する。** scripts/verify-docs-claims.cljs が tree から
+2. **数値は検証器に固定する。** scripts/verify-docs-claims.cljk が tree から
    再計算して照合し、食い違えば exit 1、tree を読み切れなければ exit 2 を返す。
    保存 14 ファイルの sha256 を固定してあるので、custody が崩れれば byte 合計に
    紛れずに名前で報告される。

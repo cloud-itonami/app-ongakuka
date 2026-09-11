@@ -1,6 +1,6 @@
 {
   "name": "kotodama-ong4k4k4",
-  // Compiled from src/ongakuka/worker.cljs by shadow-cljs (:target :esm).
+  // Compiled from src/ongakuka/worker.cljk by shadow-cljs (:target :esm).
   // Before the cljs migration this pointed at a SvelteKit build output, and the
   // TypeScript a reader opened was in no bundle at all -- see docs/adr/0002.
   "main": "../../dist/worker.js",

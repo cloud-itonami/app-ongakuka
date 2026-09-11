@@ -157,14 +157,14 @@ XRPC compose
 |---|---|
 | Nanoid | `0ng4k4k4` |
 | Folder | `appview/etzhayyim-wasm-ongakuka-0ng4k4k4/` |
-| Runtime | ClojureScript（`src/ongakuka/worker.cljs` → shadow-cljs `:esm` → `dist/worker.js`、`"runtimeType": "worker"`） |
+| Runtime | ClojureScript（`src/ongakuka/worker.cljk` → shadow-cljs `:esm` → `dist/worker.js`、`"runtimeType": "worker"`） |
 | Wrangler route | `ongakuka.etzhayyim.com/*` |
 | Bindings | `HYPERDRIVE`, `B2_KEY_ID` / `B2_APPLICATION_KEY` (Backblaze B2 SigV4, ADR-0048; bucket `etzhayyim-ongakuka`), `MURAKUMO_SERVICE`, `AUTH_SERVICE`, `PDS_SERVICE`, `KAKIN_SERVICE`, `CREDITS_SERVICE` |
 
 ## Frontend
 
 - ページは Worker が `jp-go-dds`（デジタル庁デザインシステム）で server-render する
-  （`src/ongakuka/view.cljc`）。**Svelte は使わない** —— 移行で撤去済みで、
+  （`src/ongakuka/view.cljk`）。**Svelte は使わない** —— 移行で撤去済みで、
   client 側の層を足す場合も cljs で書く（superproject の skill `kotoba-uiux`）
 - 画面: lyrics editor / style picker (prompt or upload) / generation queue / waveform player / stem mixer / critic feedback
 - Deep-link: `https://ongakuka.etzhayyim.com/at/{handle}/com.etzhayyim.ongakuka.track/{rkey}`
