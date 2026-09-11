@@ -19,7 +19,7 @@ Cloudflare のアカウントは要らない（deploy だけが要る。§5）�
 git clone git@github.com:cloud-itonami/app-ongakuka.git
 cd app-ongakuka
 REPO=$PWD
-npx --yes nbb scripts/verify-docs-claims.cljs .
+npx --yes nbb scripts/verify-docs-claims.cljk .
 ```
 
 末尾が `OK` なら README の数値・存在・不在は tree と一致している。
@@ -114,12 +114,12 @@ lock を他セッションが持っていると exit 2 で拒否される。**�
 し、最初のリクエストで `Cannot read properties of undefined` を投げる bundle を
 書いていた ——「ビルドが通った」は検査ではなかった（**落ちようがなかった**）。
 
-この repo で実際に落として確かめた。`src/ongakuka/worker.cljs:105` の
+この repo で実際に落として確かめた。`src/ongakuka/worker.cljk:105` の
 `route/dispatch` を、存在しない `route/dispatch-nonexistent` に改名して再ビルドする:
 
 ```
 ------ ERROR -------------------------------------------------------------------
- File: src/ongakuka/worker.cljs:105:44
+ File: src/ongakuka/worker.cljk:105:44
 ```
 
 | | exit | `dist/worker.js` sha256 | bytes |
@@ -140,7 +140,7 @@ lock を他セッションが持っていると exit 2 で拒否される。**�
 ここが deploy されるものに触る唯一の検査である。
 
 ```bash
-cd "$REPO" && npx --yes nbb scripts/smoke-worker.cljs dist/worker.js
+cd "$REPO" && npx --yes nbb scripts/smoke-worker.cljk dist/worker.js
 ```
 
 ```
