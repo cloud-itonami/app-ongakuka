@@ -77,7 +77,7 @@ shadow.resource/inline で bundle に焼く（design system の外部リクエ�
   shadow の export を別 ns にする / view が route 表でなく固定値を描く。
   それぞれ対応する claim だけが落ちることを確認した。
 
-- **bundle をビルドし、実際に叩いた。** shadow-cljs release worker が
+- **bundle をビルドし、実際に叩いた。** amu compile --target wasm32-browser worker が
   55 files / 12 compiled / 0 warnings / 44.9s で通り、dist/worker.js（245 KB）を
   出した。scripts/smoke-worker.cljk がそれを import して 14 項目を確認:
   default export が fetch を持つ / GET / が 200 の HTML で route 表の全 path を
