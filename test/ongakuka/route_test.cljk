@@ -1,5 +1,5 @@
 (ns ongakuka.route-test
-  (:require [kotoba.lang.text] [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.lang.text] [kotoba.test :refer [deftest is testing]]
             [ongakuka.route :as route]
             [ongakuka.view :as view]))
 
