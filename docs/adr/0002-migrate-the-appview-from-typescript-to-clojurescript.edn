@@ -21,7 +21,7 @@ ADR-0001 は測って 3 つの欠陥を記録した: (1) deploy される handle
 
 ADR-0001 の初版は Open question を『正本は app.ts か SvelteKit か』と書いたが、
 オーナーがこれを退けた。**この workspace の正本言語は cljs と kotoba である。**
-superproject CLAUDE.md の runtime 順序は kotoba wasm > clojurewasm >
+superproject AGENTS.md の runtime 順序は kotoba wasm > clojurewasm >
 ClojureScript > nbb で、TypeScript はそこに無い。候補の 2 つはどちらも
 TypeScript なので、どちらを選んでも正本には着地しない。
 
@@ -111,14 +111,14 @@ mutation を 2 度当てて 2 度とも緑だったので気づいた（外し�
    POST /xrpc/ が 400、OPTIONS が 204、未知パスが 404 を返すことを確認した。
    これは Node で bundle を import する smoke より強い証拠である（実際の
    Workers ランタイムで動かしているため）。
-2. CLAUDE.md が Runtime を『TS Native (src/app.ts)』、Frontend を
+2. AGENTS.md が Runtime を『TS Native (src/app.ts)』、Frontend を
    『Hono router + Svelte CSR』と書いていた。どちらも移行で偽になったので更新した。
    このファイルは custody の byte 一致集合から外し、**内容で検査する**形にした
    （wrangler.jsonc と同じ扱い）。意図的な変更と勝手な変更を区別するためである。
 
 検証器に Svelte が戻ってきたら落ちる claim を足し、4 経路すべてで実際に落として
 確認した: .svelte ファイルが戻る / svelte.config.js が戻る（撤去リストに無い名前
-でも捕まる）/ compatibility_flags に nodejs_compat が戻る / CLAUDE.md が Svelte
+でも捕まる）/ compatibility_flags に nodejs_compat が戻る / AGENTS.md が Svelte
 計画に戻る。
 
 ## 訂正 2（2026-08-18）— 多段パスの扱いを移行前に戻した

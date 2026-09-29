@@ -53,7 +53,7 @@ route 表を渡す側が持ち、ページは描くだけなので、両者が�
 | ビルド | `deps.edn` / `shadow-cljs.edn` |
 | Worker 設定 | `appview/…/wrangler.jsonc` |
 | actor 記述子 | `appview/…/kotodama.jsonld` |
-| 設計 | `CLAUDE.md` / `MIGRATION-TODO.md` |
+| 設計 | `AGENTS.md` / `MIGRATION-TODO.md` |
 | 由来・権利・識別 | `NOTICE` / `PROJECT.jsonld` / `README.edn` / `migration.edn` |
 | 文書 | `README.md` / `docs/operator-quickstart.md` / `docs/adr/*.edn` |
 
