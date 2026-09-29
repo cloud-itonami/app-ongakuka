@@ -35,7 +35,7 @@
 
 ;; Inherited files this repository still carries BYTE-IDENTICAL. wrangler.jsonc left
 ;; this set deliberately in the migration and is checked by content below instead.
-;; CLAUDE.md left this set deliberately: it described the runtime as "TS Native
+;; AGENTS.md left this set deliberately: it described the runtime as "TS Native
 ;; (src/app.ts)" and the frontend as "Hono router + Svelte CSR", both of which the
 ;; migration made false. Checked by content below instead of by hash.
 (def preserved
@@ -111,10 +111,10 @@
                                 (str/includes? % "/svelte/"))
                            files)))
 
-    ;; CLAUDE.md no longer plans a Svelte frontend or claims a TypeScript runtime
-    (let [c (slurp* "CLAUDE.md")]
+    ;; AGENTS.md no longer plans a Svelte frontend or claims a TypeScript runtime
+    (let [c (slurp* "AGENTS.md")]
       (if (nil? c)
-        (undet! "CLAUDE.md unreadable")
+        (undet! "AGENTS.md unreadable")
         (check! :claude-md-describes-cljs true
                 (and (not (str/includes? c "Svelte CSR"))
                      (not (str/includes? c "App Component (TS Native)"))

@@ -1,6 +1,6 @@
 # etzhayyim-project-ongakuka — 音楽家 (AI Music Generation)
 
-共通ルールは `60-apps/CLAUDE.md` を参照。
+共通ルールは `60-apps/AGENTS.md` を参照。
 
 ## Overview
 
@@ -112,7 +112,7 @@ XRPC compose
 
 ## Inference Backend
 
-`murakumo:inference/audio@1.0.0` (新規) を呼ぶ。murakumo CLAUDE.md §Audio / Music 参照。
+`murakumo:inference/audio@1.0.0` (新規) を呼ぶ。murakumo AGENTS.md §Audio / Music 参照。
 
 | Stage | Provider call | Model (Phase 0) |
 |---|---|---|
@@ -151,7 +151,7 @@ XRPC compose
 
 2026-08-18 に TypeScript/Svelte から ClojureScript へ移行した（docs/adr/0002）。
 このリポジトリの正本言語は cljs / kotoba であって TypeScript ではない
-（superproject CLAUDE.md の runtime 順序）。
+（superproject AGENTS.md の runtime 順序）。
 
 | Key | Value |
 |---|---|

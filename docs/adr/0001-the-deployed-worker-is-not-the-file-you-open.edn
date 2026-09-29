@@ -18,7 +18,7 @@ README.md も無かった。入口は README.edn（6 行の EDN メタデータ�
 冷たい読み手が『何が deploy され、何が deploy されないか』を知る手段が無かった。
 
 fleet 成熟度計測（superproject ADR-2608052000）はこの repo を own=0.0481 と測り、
-docs 軸は 0bp である。設計文書は在る（CLAUDE.md 8,909 バイト）—— 無いのは
+docs 軸は 0bp である。設計文書は在る（AGENTS.md 8,909 バイト）—— 無いのは
 README.md と operator quickstart と ADR である。
 
 ## 測定（2026-08-18、tree 27cec35）
@@ -98,7 +98,7 @@ MIGRATION-TODO.md の 7 項目のチェックボックスは全て未チェッ�
 ## 訂正（2026-08-18、オーナー指摘）
 
 初版はこの節に『正本は src/app.ts か SvelteKit 側か』と書いた。**問いの立て方が
-誤っている。** superproject CLAUDE.md の repo-wide 規則は第一の runtime を
+誤っている。** superproject AGENTS.md の repo-wide 規則は第一の runtime を
 kotoba wasm > clojurewasm > ClojureScript > nbb と定めており、TypeScript は
 その順序に入っていない。候補の 2 つはどちらも TypeScript なので、どちらを選んでも
 正本には着地しない。
